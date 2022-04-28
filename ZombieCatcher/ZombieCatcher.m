@@ -7,15 +7,13 @@
 
 #import <Foundation/Foundation.h>
 #import <libkern/OSAtomicQueue.h>
-#import <pthread.h>
-#import <objc/runtime.h>
-#import <malloc/malloc.h>
-#import <mach-o/dyld.h>
-#import <objc/runtime.h>
 #import <os/base.h>
+#import <objc/runtime.h>
+#import <mach-o/dyld.h>
+#import <malloc/malloc.h>
+
 #import "fishhook.h"
 #import "fishhook_extension.h"
-#import "AppDelegate.h"
 
 
 #pragma mark - statement
