@@ -8,6 +8,7 @@
 #import <Foundation/Foundation.h>
 #import <libkern/OSAtomicQueue.h>
 #import <os/base.h>
+#import <os/lock.h>
 #import <objc/runtime.h>
 #import <mach-o/dyld.h>
 #import <malloc/malloc.h>
@@ -15,11 +16,16 @@
 #import "fishhook.h"
 #import "fishhook_extension.h"
 
-
 #pragma mark - statement
+static void _open_zombie_catcher(void);
+
 static void _recorder_memory_ptr(void *ptr);
 
 static void _free_some_memory(size_t freeNum);
+
+void open_zombie_catcher(void) {
+    _open_zombie_catcher();
+}
 
 void free_some_memory(size_t size) {
     _free_some_memory(size);
@@ -34,8 +40,9 @@ typedef struct {
     void *next;
 } MemNode;
 
-static BOOL             IsUseFreeHook             = YES;
-static BOOL             IsPreDestructObject       = YES;
+static BOOL             IsHooked                  = NO;
+static BOOL             IsUseFreeHook             = NO;
+static BOOL             IsPreDestructObject       = NO;
 static IMP              OriginDeallocIMP          = NULL;
 static free_func_type   OriginFreeFunc            = NULL;
 
@@ -157,38 +164,6 @@ static inline void LogErrorWithAbort(void *ptr, Class cls, ClassOrCFType type, c
 
 @implementation ZombieCatcher
 
-+ (void)load {
-    ZombieCatcherPrefixLength = strlen(ZombieCatcherPrefix);
-    ZombieCatcherClass = self;
-    ZombieCatcherMinByte = class_getInstanceSize(self);
-    
-    RegisteredClasses = CFSetCreateMutable(NULL, 0, NULL);
-    
-    unsigned int count = 0;
-    Class *classes = objc_copyClassList(&count);
-    for (unsigned int i = 0; i < count; i++) {
-        CFSetAddValue(RegisteredClasses, (__bridge const void *)(classes[i]));
-    }
-    
-    free(classes);
-    
-    initialize_recorder_memory_zone();
-    BOOL isSuccess = hook_free_function_for_objc();
-    if (isSuccess) {
-        // hook `free`
-        IsUseFreeHook = YES;
-    } else {
-        // hook `-dealloc`
-        IsUseFreeHook = NO;
-        
-        Method deallocMethod = class_getInstanceMethod(NSObject.class, @selector(dealloc));
-        OriginDeallocIMP = method_getImplementation(deallocMethod);
-        
-        Method hookedDeallocMethod = class_getInstanceMethod(NSObject.class, @selector(HookedDealloc));
-        method_exchangeImplementations(deallocMethod, hookedDeallocMethod);
-    }
-}
-
 - (id)forwardingTargetForSelector:(SEL)aSelector {
     LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, sel_getName(aSelector));
     return nil;
@@ -231,9 +206,48 @@ static inline void LogErrorWithAbort(void *ptr, Class cls, ClassOrCFType type, c
 @end
 
 
+static os_unfair_lock InitLock = OS_UNFAIR_LOCK_INIT;
+static void _open_zombie_catcher(void) {
+    os_unfair_lock_lock(&InitLock);
+    if (IsHooked) {
+        os_unfair_lock_unlock(&InitLock);
+        return;
+    }
+    ZombieCatcherPrefixLength = strlen(ZombieCatcherPrefix);
+    ZombieCatcherClass = ZombieCatcher.class;
+    ZombieCatcherMinByte = class_getInstanceSize(ZombieCatcher.class);
+    
+    RegisteredClasses = CFSetCreateMutable(NULL, 0, NULL);
+    
+    unsigned int count = 0;
+    Class *classes = objc_copyClassList(&count);
+    for (unsigned int i = 0; i < count; i++) {
+        CFSetAddValue(RegisteredClasses, (__bridge const void *)(classes[i]));
+    }
+    
+    free(classes);
+    
+    initialize_recorder_memory_zone();
+    BOOL isSuccess = hook_free_function_for_objc();
+    if (isSuccess) {
+        // hook `free`
+        IsUseFreeHook = YES;
+    } else {
+        // hook `-dealloc`
+        IsUseFreeHook = NO;
+        IsPreDestructObject = YES;
+        
+        Method deallocMethod = class_getInstanceMethod(NSObject.class, @selector(dealloc));
+        OriginDeallocIMP = method_getImplementation(deallocMethod);
+        
+        Method hookedDeallocMethod = class_getInstanceMethod(NSObject.class, @selector(HookedDealloc));
+        method_exchangeImplementations(deallocMethod, hookedDeallocMethod);
+    }
+    IsHooked = YES;
+    os_unfair_lock_unlock(&InitLock);
+}
+
 #pragma mark - recorder_memory_ptr
-
-
 typedef struct {
     Class isa;
 } objc_object_simulate;
@@ -317,6 +331,9 @@ static void _recorder_memory_ptr(void *ptr) {
 #pragma mark - free_some_memory
 /// dequeue 取出内存地址进行释放操作
 static void _free_some_memory(size_t freeNum) {
+    if (!IsHooked) {
+        return;
+    }
     size_t size = StealPtrQueueSize;
     size_t realFreeCount = freeNum > size ? size : freeNum;
     for (int i = 0; i < realFreeCount; ++i) {

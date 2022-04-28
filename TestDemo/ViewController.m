@@ -6,6 +6,7 @@
 //
 
 #import "ViewController.h"
+#import <ZombieCatcher/ZombieCatcher.h>
 
 @interface ViewController ()
 
@@ -13,27 +14,31 @@
 
 @implementation ViewController
 
++ (void)load {
+    // open_zombie_catcher();
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
 }
 
-
-- (IBAction)createZombieViews:(id)sender {
-    int nums = 10000;
-    NSLog(@"create %d views", nums);
-    for (int i = 0; i < nums; ++i) {
-        UIView *testView = [[UIView alloc] init];
-        [testView release];
-    }
+- (IBAction)openCatcher:(UIButton *)sender {
+    open_zombie_catcher();
+    [sender setTitle:@"ZombieCatcher Is Open" forState:UIControlStateDisabled];
+    [sender setTitleColor:UIColor.whiteColor forState:UIControlStateDisabled];
+    [sender setBackgroundColor:UIColor.grayColor];
+    sender.enabled = NO;
 }
 
-- (IBAction)zombieViewCall:(id)sender {
+- (IBAction)zombieViewCall:(UIButton *)sender {
     UIView *zombieView = [[UIView alloc] init];
     [zombieView release];
-    for (int i = 0; i < 100; ++i) {
+    
+    for (int i = 0; i < 10000; i++) {
         UIView *testView = [[UIView alloc] init];
-        [testView release];
+        [testView autorelease];
     }
+    
     [zombieView setNeedsLayout];
 }
 

@@ -21,6 +21,8 @@ FOUNDATION_EXPORT const unsigned char ZombieCatcherVersionString[];
 extern "C" {
 #endif
 
+void open_zombie_catcher(void);
+
 void free_some_memory(size_t freeNum);
 
 #ifdef __cplusplus
