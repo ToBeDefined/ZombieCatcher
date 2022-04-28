@@ -6,6 +6,7 @@
 //
 
 #import "AppDelegate.h"
+#import <ZombieCatcher/ZombieCatcher.h>
 
 @interface AppDelegate ()
 
