@@ -123,7 +123,7 @@ typedef union ClassOrCFType {
     };
 } ClassOrCFType;
 #else
-#define CLASS_WITH_CF_ID_MASK        0x7FFFFFFFULL
+#define CLASS_WITH_CF_ID_MASK        0x7FFFFFFF
 typedef union ClassOrCFType {
     uintptr_t bits;
     struct {
