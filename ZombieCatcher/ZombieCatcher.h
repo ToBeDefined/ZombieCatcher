@@ -16,3 +16,13 @@ FOUNDATION_EXPORT const unsigned char ZombieCatcherVersionString[];
 // In this header, you should import all the public headers of your framework using statements like #import <ZombieCatcher/PublicHeader.h>
 
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void free_some_memory(size_t freeNum);
+
+#ifdef __cplusplus
+}
+#endif

@@ -19,6 +19,7 @@
 		3F19BDD4281A36A400F84D6B /* fishhook.c in Sources */ = {isa = PBXBuildFile; fileRef = 3F19BDD2281A36A300F84D6B /* fishhook.c */; };
 		3F19BDD7281A36D900F84D6B /* fishhook_extension.c in Sources */ = {isa = PBXBuildFile; fileRef = 3F19BDD5281A36D900F84D6B /* fishhook_extension.c */; };
 		3F19BDD8281A36D900F84D6B /* fishhook_extension.h in Headers */ = {isa = PBXBuildFile; fileRef = 3F19BDD6281A36D900F84D6B /* fishhook_extension.h */; };
+		3F19BDDA281A370F00F84D6B /* ZombieCatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F19BDD9281A370F00F84D6B /* ZombieCatcher.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 		3F19BDD2281A36A300F84D6B /* fishhook.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fishhook.c; sourceTree = "<group>"; };
 		3F19BDD5281A36D900F84D6B /* fishhook_extension.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = fishhook_extension.c; sourceTree = "<group>"; };
 		3F19BDD6281A36D900F84D6B /* fishhook_extension.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = fishhook_extension.h; sourceTree = "<group>"; };
+		3F19BDD9281A370F00F84D6B /* ZombieCatcher.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZombieCatcher.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +84,7 @@
 			isa = PBXGroup;
 			children = (
 				3F19BDAD281A360000F84D6B /* ZombieCatcher.h */,
+				3F19BDD9281A370F00F84D6B /* ZombieCatcher.m */,
 				3F19BDD2281A36A300F84D6B /* fishhook.c */,
 				3F19BDD1281A36A300F84D6B /* fishhook.h */,
 				3F19BDD5281A36D900F84D6B /* fishhook_extension.c */,
@@ -220,6 +223,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3F19BDDA281A370F00F84D6B /* ZombieCatcher.m in Sources */,
 				3F19BDD7281A36D900F84D6B /* fishhook_extension.c in Sources */,
 				3F19BDD4281A36A400F84D6B /* fishhook.c in Sources */,
 			);

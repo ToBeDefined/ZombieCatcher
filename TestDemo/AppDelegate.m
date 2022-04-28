@@ -38,3 +38,18 @@
 
 
 @end
+
+
+#pragma mark - AppDelegate Memory Warning
+@interface AppDelegate (Warning)
+
+@end
+
+@implementation AppDelegate (Warning)
+
+/// 收到内存警告, 释放部分内存
+- (void)applicationDidReceiveMemoryWarning:(UIApplication *)application {
+    free_some_memory(1024 * 1024);
+}
+
+@end
