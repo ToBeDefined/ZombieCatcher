@@ -293,8 +293,7 @@ static void _recorder_memory_ptr(void *ptr) {
             zombieObject.typeInfo = typeInfo;
         }
     } else {
-        /// 没有提前析构对象的话, 不能随意操作这片内存, 不能写入脏内存
-        NSCAssert(typeInfo.bits != 0x00, @"采用了 hook dealloc 方式, 但是没找到对应的 class 信息, 或许是动态生成的class, 没包含在全局表中");
+        /// 是 hook dealloc 的形式, 并且没有提前析构对象的话, 不能随意操作这片内存, 不能写入脏内存
         char newClsName[256] = { 0 };
         strcpy(newClsName, ZombieCatcherPrefix);
         strcpy(newClsName + ZombieCatcherPrefixLength, class_getName((__bridge Class)(void *)typeInfo.clsOrTypeID));
