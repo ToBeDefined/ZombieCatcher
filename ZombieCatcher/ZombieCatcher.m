@@ -268,10 +268,12 @@ static void _recorder_memory_ptr(void *ptr) {
         if (!IsUseFreeHook || CFSetContainsValue(RegisteredClasses, (__bridge void *)origClass)) {
             if (strcmp(class_getName(origClass), "__NSCFType") == 0) {
                 CFTypeID cfTypeID = CFGetTypeID(ptr);
+                NSCAssert((cfTypeID & ~CLASS_OR_CF_ID_MASK) == 0x00, @"ERROR: CFTypeID too big");
                 typeInfo.isCFType = true;
                 typeInfo.clsOrTypeID = cfTypeID;
                 // printf("hook memory: %s\n", [(__bridge NSString *)CFCopyTypeIDDescription(cfTypeID) UTF8String]);
             } else {
+                NSCAssert(((uintptr_t)origClass & ~CLASS_OR_CF_ID_MASK) == 0x00, @"ERROR: Class ptr error");
                 typeInfo.isCFType = false;
                 typeInfo.clsOrTypeID = (uintptr_t)origClass;
                 // printf("hook memory: %s\n", class_getName(origClass));
