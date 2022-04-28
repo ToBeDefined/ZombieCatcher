@@ -13,6 +13,8 @@
 #import <mach-o/dyld.h>
 #import <malloc/malloc.h>
 
+#import "ZombieCatcher.h"
+#import "ZombiCrashTaker.h"
 #import "fishhook.h"
 #import "fishhook_extension.h"
 
@@ -23,7 +25,21 @@ static void _recorder_memory_ptr(void *ptr);
 
 static void _free_some_memory(size_t freeNum);
 
-void open_zombie_catcher(void) {
+static NSLock *callbackArrayLock = nil;
+static NSMutableArray *callbackArray = nil;
+void open_zombie_catcher(ZombieCatcherCallback callback) {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        callbackArrayLock = [[NSLock alloc] init];
+        callbackArray = [[NSMutableArray alloc] init];
+    });
+    
+    if (callback) {
+        [callbackArrayLock lock];
+        [callbackArray addObject:[callback copy]];
+        [callbackArrayLock unlock];
+    }
+    
     _open_zombie_catcher();
 }
 
@@ -138,22 +154,44 @@ typedef union ClassOrCFType {
 } ClassOrCFType;
 #endif
 
-static inline void LogErrorWithAbort(void *ptr, Class cls, ClassOrCFType type, const char *selectorName) {
+static inline void LoggingAndCallback(void *ptr, Class cls, ClassOrCFType type, SEL selector) {
+    const char *className = NULL;
+    CFStringRef cfTypeString = NULL;
+    
     if (!IsUseFreeHook && !IsPreDestructObject) {
         const char *name = class_getName(cls);
         if (strncmp(name, ZombieCatcherPrefix, ZombieCatcherPrefixLength) == 0) {
-            NSLog(@"发现野指针调用: <%p, %s>, selector: %s", ptr, name + ZombieCatcherPrefixLength, selectorName);
+            className = name + ZombieCatcherPrefixLength;
         } else {
-            NSLog(@"发现野指针调用: <%p, %s>, selector: %s", ptr, name, selectorName);
+            className = name;
         }
     } else {
         if (type.isCFType) {
-            NSLog(@"发现野指针调用: <%p, __NSCFType : %@>, selector: %s", ptr, (__bridge NSString *)CFCopyTypeIDDescription(type.bits & CLASS_OR_CF_ID_MASK), selectorName);
+            className = "__NSCFType";
+            cfTypeString = CFCopyTypeIDDescription(type.bits & CLASS_OR_CF_ID_MASK);
         } else {
-            NSLog(@"发现野指针调用: <%p, %s>, selector: %s", ptr, class_getName((__bridge Class)(void *)(type.bits & CLASS_OR_CF_ID_MASK)), selectorName);
+            className = class_getName((__bridge Class)(void *)(type.bits & CLASS_OR_CF_ID_MASK));
         }
     }
-    abort();
+    
+    /// Log
+    if (cfTypeString) {
+        NSLog(@"发现 ZombieObject 调用: <%p : %s : %@>, selector: %s", ptr, className, (__bridge NSString *)cfTypeString, sel_getName(selector));
+    } else {
+        NSLog(@"发现 ZombieObject 调用: <%p : %s>, selector: %s", ptr, className, sel_getName(selector));
+    }
+    
+    /// callback
+    [callbackArrayLock lock];
+    for (ZombieCatcherCallback block in callbackArray) {
+        block(ptr, className, [(__bridge NSString *)cfTypeString UTF8String], selector);
+    }
+    [callbackArrayLock unlock];
+    
+    /// release CFStringRef
+    if (cfTypeString) {
+        CFRelease(cfTypeString);
+    }
 }
 
 @interface ZombieCatcher : NSObject
@@ -165,41 +203,41 @@ static inline void LogErrorWithAbort(void *ptr, Class cls, ClassOrCFType type, c
 @implementation ZombieCatcher
 
 - (id)forwardingTargetForSelector:(SEL)aSelector {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, sel_getName(aSelector));
-    return nil;
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, aSelector);
+    return ZombiCrashTaker.shared;
 }
 
 - (void)dealloc {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "dealloc");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     [super dealloc];
 }
 
 - (instancetype)copyWithZone:(NSZone *)zone {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "copyWithZone:");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     return nil;
 }
 
 - (instancetype)mutableCopyWithZone:(NSZone *)zone {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "mutableCopyWithZone:");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     return nil;
 }
 
 - (instancetype)retain {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "retain");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     return nil;
 }
 
 - (NSUInteger)retainCount {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "retainCount");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     return 0;
 }
 
 - (oneway void)release {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "release");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
 }
 
 - (instancetype)autorelease {
-    LogErrorWithAbort((__bridge void *)self, self.class, _typeInfo, "autorelease");
+    LoggingAndCallback((__bridge void *)self, self.class, _typeInfo, _cmd);
     return nil;
 }
 
