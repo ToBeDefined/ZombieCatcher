@@ -114,16 +114,16 @@ void initialize_recorder_memory_zone(void) {
 #pragma mark - ZombieCatcher
 
 #ifdef __LP64__
-#define CLASS_WITH_CF_ID_MASK        0x7FFFFFFFFFFFFFFFULL
+#define CLASS_OR_CF_ID_MASK         0x7FFFFFFFFFFFFFFFULL
 typedef union ClassOrCFType {
     uintptr_t bits;
     struct {
-        uintptr_t clsOrTypeID       : 61;
+        uintptr_t clsOrTypeID       : 63;
         uintptr_t isCFType          : 1;
     };
 } ClassOrCFType;
 #else
-#define CLASS_WITH_CF_ID_MASK        0x7FFFFFFF
+#define CLASS_OR_CF_ID_MASK         0x7FFFFFFF
 typedef union ClassOrCFType {
     uintptr_t bits;
     struct {
@@ -143,9 +143,9 @@ static inline void LogErrorWithAbort(void *ptr, Class cls, ClassOrCFType type, c
         }
     } else {
         if (type.isCFType) {
-            NSLog(@"发现野指针调用: <%p, __NSCFType : %@>, selector: %s", ptr, (__bridge NSString *)CFCopyTypeIDDescription(type.bits & CLASS_WITH_CF_ID_MASK), selectorName);
+            NSLog(@"发现野指针调用: <%p, __NSCFType : %@>, selector: %s", ptr, (__bridge NSString *)CFCopyTypeIDDescription(type.bits & CLASS_OR_CF_ID_MASK), selectorName);
         } else {
-            NSLog(@"发现野指针调用: <%p, %s>, selector: %s", ptr, class_getName((__bridge Class)(void *)(type.bits & CLASS_WITH_CF_ID_MASK)), selectorName);
+            NSLog(@"发现野指针调用: <%p, %s>, selector: %s", ptr, class_getName((__bridge Class)(void *)(type.bits & CLASS_OR_CF_ID_MASK)), selectorName);
         }
     }
     abort();
