@@ -82,13 +82,12 @@ static size_t           ZombieCatcherPrefixLength = 16;
 
 
 #pragma mark - hook free
-
 void _hooked_free(void *ptr) {
     _recorder_memory_ptr(ptr);
 }
 
 bool hook_free_function_for_objc(void) {
-    struct rebinding rebind_infos [] = {
+    struct rebinding rebind_free [] = {
         {
             .name = "free",
             .replacement = (void *)_hooked_free,
@@ -97,7 +96,7 @@ bool hook_free_function_for_objc(void) {
     };
     
     /// 因为 dyld_shared_cache, 可能 libobjc 中直接调用的 free 内存而不是查找符号表, 此时返回是否 hook 成功, 如果失败, 走 dealloc 方法 hook 的方式
-    rebind_symbols_for_imagename(rebind_infos, sizeof(rebind_infos) / sizeof(struct rebinding), "libobjc.A.dylib");
+    rebind_symbols_for_imagename(rebind_free, sizeof(rebind_free) / sizeof(struct rebinding), "libobjc.A.dylib");
     return OriginFreeFunc != NULL;
 }
 
@@ -121,15 +120,6 @@ bool hook_free_function_for_objc(void) {
 }
 
 @end
-
-
-#pragma mark - Memory Pointer Queue
-void initialize_recorder_memory_zone(void) {
-    if (MemNodeZone == NULL) {
-        MemNodeZone = malloc_create_zone(0, 0);
-        malloc_set_zone_name(MemNodeZone, "ZOMBIE_CATCHER_MEM_NODE_ZONE");
-    }
-}
 
 
 #pragma mark - ZombieCatcher
@@ -243,7 +233,6 @@ static inline void LoggingAndCallback(void *ptr, Class cls, ClassOrCFType type, 
 
 @end
 
-
 static os_unfair_lock InitLock = OS_UNFAIR_LOCK_INIT;
 static void _open_zombie_catcher(void) {
     os_unfair_lock_lock(&InitLock);
@@ -265,7 +254,11 @@ static void _open_zombie_catcher(void) {
     
     free(classes);
     
-    initialize_recorder_memory_zone();
+    if (MemNodeZone == NULL) {
+        MemNodeZone = malloc_create_zone(0, 0);
+        malloc_set_zone_name(MemNodeZone, "ZOMBIE_CATCHER_MEM_NODE_ZONE");
+    }
+    
     BOOL isSuccess = hook_free_function_for_objc();
     if (isSuccess) {
         // hook `free`
@@ -281,6 +274,7 @@ static void _open_zombie_catcher(void) {
         Method hookedDeallocMethod = class_getInstanceMethod(NSObject.class, @selector(HookedDealloc));
         method_exchangeImplementations(deallocMethod, hookedDeallocMethod);
     }
+    
     IsHooked = YES;
     os_unfair_lock_unlock(&InitLock);
 }
@@ -363,7 +357,6 @@ static void _recorder_memory_ptr(void *ptr) {
     __sync_fetch_and_add(&StealPtrQueueSize, 1);
     __sync_fetch_and_add(&StealPtrMemSize, memSize);
 }
-
 
 
 #pragma mark - free_some_memory
