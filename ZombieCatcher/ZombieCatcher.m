@@ -277,6 +277,7 @@ static void _open_zombie_catcher(void) {
     
     IsHooked = YES;
     os_unfair_lock_unlock(&InitLock);
+    NSLog(@"OpenZombieCatcher: IsHooked: %d, IsUseFreeHook: %d, IsPreDestructObject: %d", IsHooked, IsUseFreeHook, IsPreDestructObject);
 }
 
 #pragma mark - recorder_memory_ptr

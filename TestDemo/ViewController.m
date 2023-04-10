@@ -78,13 +78,9 @@
         }
             
         default: {
-            if (!self.isOpen) {
-                /// 没开启情况下, 再次 release 会闪退
-                [zombieView layoutIfNeeded];
-            } else{
-                /// 开启时候检测 release 的调用
-                [zombieView release];
-            }
+            /// 没开启情况下, 再次 release 会闪退
+            /// 开启时候可以检测 release 的二次调用
+            [zombieView release];
             break;
         }
     }
